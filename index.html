@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Calculadora y administración personal de licencias">
+  <title>Mis licencias</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="./css/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar container-fluid">
+      <a class="brand" href="#" aria-label="Inicio">
+        <span class="brand-mark"><i class="bi bi-calendar2-check"></i></span>
+        <span><strong>Mis licencias</strong><small>Tiempo claro, decisiones simples</small></span>
+      </a>
+      <div class="d-flex align-items-center gap-2">
+        <span id="syncStatus" class="sync-pill"><span class="sync-dot"></span>Conectando</span>
+        <button id="settingsButton" class="btn btn-light btn-icon" data-bs-toggle="offcanvas" data-bs-target="#adminPanel" aria-label="Configuración">
+          <i class="bi bi-sliders2"></i>
+        </button>
+        <button id="logoutButton" class="btn btn-light btn-icon d-none" aria-label="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></button>
+      </div>
+    </header>
+
+    <main class="container-fluid px-3 px-lg-4 pb-5">
+      <section class="intro-row">
+        <div>
+          <p class="eyebrow mb-2">PANORAMA PERSONAL</p>
+          <h1>Organizá tu tiempo libre.</h1>
+          <p class="text-secondary mb-0">Calculá, simulá y mantené cada saldo al día.</p>
+        </div>
+        <button id="newLicenseButton" class="btn btn-primary rounded-pill px-4"><i class="bi bi-plus-lg me-2"></i>Nueva licencia</button>
+      </section>
+
+      <section id="balanceCards" class="balance-grid" aria-label="Saldos disponibles">
+        <div class="balance-card skeleton-card"></div>
+        <div class="balance-card skeleton-card"></div>
+        <div class="balance-card skeleton-card"></div>
+      </section>
+
+      <section class="workspace-grid">
+        <article class="panel calendar-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow mb-1">PLANIFICACIÓN</p>
+              <h2>Calendario</h2>
+            </div>
+            <div class="legend"><span class="holiday-dot"></span>Feriado <span class="license-dot"></span>Licencia</div>
+          </div>
+          <div id="calendar"></div>
+        </article>
+
+        <aside class="panel form-panel" id="licenseEditor">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow mb-1">CÁLCULO</p>
+              <h2 id="formTitle">Nueva licencia</h2>
+            </div>
+            <button id="clearFormButton" class="btn-close" aria-label="Limpiar formulario"></button>
+          </div>
+          <form id="licenseForm" novalidate>
+            <input type="hidden" id="licenseId">
+            <label class="form-label" for="licenseType">Tipo de licencia</label>
+            <select id="licenseType" class="form-select mb-3" required></select>
+
+            <div class="mode-switch mb-3" role="group" aria-label="Modo de cálculo">
+              <input type="radio" class="btn-check" name="calcMode" id="rangeMode" value="range" checked>
+              <label class="btn" for="rangeMode">Elegir período</label>
+              <input type="radio" class="btn-check" name="calcMode" id="quantityMode" value="quantity">
+              <label class="btn" for="quantityMode">Indicar días</label>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-6">
+                <label class="form-label" for="startDate">Desde</label>
+                <input id="startDate" type="date" class="form-control" required>
+              </div>
+              <div class="col-6" id="endDateGroup">
+                <label class="form-label" for="endDate">Hasta</label>
+                <input id="endDate" type="date" class="form-control" required>
+              </div>
+              <div class="col-6 d-none" id="quantityGroup">
+                <label class="form-label" for="quantity">Cantidad</label>
+                <input id="quantity" type="number" min="1" step="1" class="form-control" value="1">
+              </div>
+              <div class="col-12 d-none" id="hoursGroup">
+                <label class="form-label" for="hours">Horas a consumir</label>
+                <input id="hours" type="number" min="0.25" step="0.25" class="form-control" placeholder="Ej.: 4">
+              </div>
+              <div class="col-12">
+                <label class="form-label" for="notes">Nota <span class="text-secondary fw-normal">(opcional)</span></label>
+                <textarea id="notes" class="form-control" rows="2" maxlength="300" placeholder="Detalle o referencia"></textarea>
+              </div>
+            </div>
+
+            <div id="calculationResult" class="result-card mt-4" aria-live="polite">
+              <div class="empty-result"><i class="bi bi-stars"></i><span>Completá las fechas para ver la simulación.</span></div>
+            </div>
+            <div id="formError" class="alert alert-danger d-none mt-3 mb-0" role="alert"></div>
+            <div class="d-grid gap-2 mt-4">
+              <button type="button" id="simulateButton" class="btn btn-outline-primary">Simular</button>
+              <button type="submit" id="saveButton" class="btn btn-primary"><i class="bi bi-check2-circle me-2"></i>Confirmar licencia</button>
+              <button type="button" id="cancelLicenseButton" class="btn btn-outline-danger d-none">Cancelar licencia</button>
+            </div>
+          </form>
+        </aside>
+      </section>
+    </main>
+  </div>
+
+  <div class="offcanvas offcanvas-end admin-panel" tabindex="-1" id="adminPanel" aria-labelledby="adminTitle">
+    <div class="offcanvas-header">
+      <div><p class="eyebrow mb-1">ADMINISTRACIÓN</p><h2 id="adminTitle" class="offcanvas-title">Configuración</h2></div>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+    </div>
+    <div class="offcanvas-body">
+      <ul class="nav nav-pills admin-tabs" role="tablist">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#typesTab">Tipos</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#balanceTab">Saldos</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#holidaysTab">Feriados</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#historyTab">Historial</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#backupTab">Respaldo</button></li>
+      </ul>
+      <div class="tab-content pt-4">
+        <div class="tab-pane fade show active" id="typesTab">
+          <div id="typesList" class="stack-list mb-4"></div>
+          <form id="typeForm" class="admin-form">
+            <input type="hidden" id="typeId">
+            <h3 id="typeFormTitle">Agregar tipo</h3>
+            <div class="row g-3">
+              <div class="col-8"><label class="form-label">Nombre</label><input id="typeName" class="form-control" required></div>
+              <div class="col-4"><label class="form-label">Color</label><input id="typeColor" type="color" class="form-control form-control-color w-100" value="#3366ff"></div>
+              <div class="col-6"><label class="form-label">Unidad</label><select id="typeUnit" class="form-select"><option value="days">Días</option><option value="hours">Horas</option></select></div>
+              <div class="col-6"><label class="form-label">Cómputo</label><select id="typeCounting" class="form-select"><option value="business">Hábiles</option><option value="calendar">Corridos</option></select></div>
+              <div class="col-6"><label class="form-label">Horas por día</label><input id="typeHoursPerDay" type="number" min="0.25" step="0.25" value="8" class="form-control"></div>
+              <div class="col-6"><label class="form-label">Saldo inicial</label><input id="typeInitial" type="number" min="0" step="0.25" value="0" class="form-control"></div>
+              <div class="col-12"><label class="form-label">Grupo de conflicto</label><input id="typeConflictGroup" value="absence" class="form-control"></div>
+              <div class="col-12 d-flex flex-wrap gap-3">
+                <div class="form-check form-switch"><input id="typeExcludeHolidays" class="form-check-input" type="checkbox" checked><label class="form-check-label">Excluir feriados</label></div>
+                <div class="form-check form-switch"><input id="typeAllowOverlap" class="form-check-input" type="checkbox"><label class="form-check-label">Permitir superposición</label></div>
+                <div class="form-check form-switch"><input id="typeActive" class="form-check-input" type="checkbox" checked><label class="form-check-label">Activo</label></div>
+              </div>
+              <div class="col-12 d-flex gap-2"><button class="btn btn-primary flex-grow-1">Guardar tipo</button><button id="clearTypeButton" type="button" class="btn btn-light">Limpiar</button></div>
+            </div>
+          </form>
+        </div>
+        <div class="tab-pane fade" id="balanceTab">
+          <div id="balancesAdmin" class="stack-list mb-4"></div>
+          <form id="adjustmentForm" class="admin-form">
+            <h3>Registrar ajuste</h3>
+            <label class="form-label">Tipo</label><select id="adjustmentType" class="form-select mb-3"></select>
+            <div class="row g-3"><div class="col-5"><label class="form-label">Cantidad</label><input id="adjustmentAmount" type="number" step="0.25" class="form-control" required></div><div class="col-7"><label class="form-label">Motivo</label><input id="adjustmentReason" class="form-control" required maxlength="120"></div></div>
+            <button class="btn btn-primary w-100 mt-3">Aplicar ajuste</button>
+          </form>
+        </div>
+        <div class="tab-pane fade" id="holidaysTab">
+          <form id="holidayForm" class="admin-form mb-4"><h3>Agregar feriado</h3><div class="row g-3"><div class="col-5"><input id="holidayDate" type="date" class="form-control" required></div><div class="col-7"><input id="holidayName" class="form-control" placeholder="Nombre" required></div></div><button class="btn btn-primary w-100 mt-3">Guardar feriado</button></form>
+          <div id="holidaysList" class="stack-list"></div>
+        </div>
+        <div class="tab-pane fade" id="historyTab"><div id="historyList" class="timeline"></div></div>
+        <div class="tab-pane fade" id="backupTab">
+          <div class="admin-form"><h3>Respaldo JSON</h3><p class="text-secondary">Exportá todos tus datos o restaurá un archivo previamente generado.</p><button id="exportButton" class="btn btn-primary w-100 mb-2"><i class="bi bi-download me-2"></i>Exportar</button><label class="btn btn-outline-primary w-100"><i class="bi bi-upload me-2"></i>Importar<input id="importInput" type="file" accept="application/json" hidden></label><p class="small text-secondary mt-3 mb-0">La importación combina datos por identificador. No borra registros que no estén en el archivo.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="authGate" class="auth-gate">
+    <div class="auth-card">
+      <span class="brand-mark large"><i class="bi bi-calendar2-check"></i></span>
+      <h2 class="mt-4">Tu tiempo, en privado.</h2>
+      <p id="authMessage" class="text-secondary">Conectá tu única cuenta autorizada para acceder a tus licencias.</p>
+      <button id="loginButton" class="btn btn-primary w-100"><i class="bi bi-google me-2"></i>Continuar con Google</button>
+    </div>
+  </div>
+
+  <div class="toast-container position-fixed bottom-0 end-0 p-3"><div id="appToast" class="toast" role="status"><div class="toast-body d-flex align-items-center gap-2"><i class="bi bi-check-circle-fill text-success"></i><span id="toastMessage"></span></div></div></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js"></script>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

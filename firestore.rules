@@ -1,0 +1,109 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Reemplazar por el UID de la única cuenta autorizada antes de desplegar.
+    function isOwner(uid) {
+      return request.auth != null
+        && request.auth.uid == uid
+        && request.auth.uid == "REEMPLAZAR_UID";
+    }
+
+    function onlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    match /users/{uid} {
+      allow read, create, update: if isOwner(uid);
+      allow delete: if false;
+
+      match /licenseTypes/{typeId} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && onlyAllowedFields([
+            'name', 'unit', 'counting', 'excludeHolidays', 'hoursPerDay',
+            'color', 'active', 'conflictGroup', 'allowOverlap',
+            'createdAt', 'updatedAt'
+          ])
+          && request.resource.data.name is string
+          && request.resource.data.unit in ['days', 'hours']
+          && request.resource.data.counting in ['business', 'calendar']
+          && request.resource.data.hoursPerDay is number
+          && request.resource.data.hoursPerDay > 0;
+        allow delete: if isOwner(uid);
+      }
+
+      match /balances/{typeId} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && onlyAllowedFields(['initial', 'adjustmentTotal', 'consumed', 'updatedAt'])
+          && request.resource.data.initial is number
+          && request.resource.data.adjustmentTotal is number
+          && request.resource.data.consumed is number
+          && request.resource.data.initial + request.resource.data.adjustmentTotal
+             - request.resource.data.consumed >= 0;
+        allow delete: if false;
+      }
+
+      match /balanceAdjustments/{adjustmentId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && onlyAllowedFields(['typeId', 'amount', 'reason', 'createdAt'])
+          && request.resource.data.amount is number
+          && request.resource.data.reason is string;
+        allow update, delete: if false;
+      }
+
+      match /holidays/{dateId} {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && onlyAllowedFields(['date', 'name', 'createdAt', 'updatedAt'])
+          && request.resource.data.date == dateId
+          && request.resource.data.name is string;
+        allow delete: if isOwner(uid);
+      }
+
+      match /licenses/{licenseId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && request.resource.data.status in ['confirmed', 'cancelled']
+          && request.resource.data.calculation is map
+          && request.resource.data.rulesSnapshot is map
+          && request.resource.data.consumedUnits is number
+          && request.resource.data.consumedUnits > 0;
+        // Una licencia confirmada puede corregirse o cancelarse, pero nunca borrarse.
+        allow update: if isOwner(uid)
+          && resource.data.status in ['confirmed', 'cancelled']
+          && request.resource.data.status in ['confirmed', 'cancelled']
+          && request.resource.data.rulesSnapshot is map
+          && request.resource.data.calculation is map;
+        allow delete: if false;
+      }
+
+      // Bloqueos deterministas escritos en la misma transacción que la licencia.
+      match /calendarDays/{dayId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && request.resource.data.date == dayId
+          && request.resource.data.licenseId is string
+          && request.resource.data.conflictGroup is string;
+        allow update: if false;
+        allow delete: if isOwner(uid);
+      }
+
+      // Libro mayor inmutable.
+      match /movements/{movementId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && request.resource.data.typeId is string
+          && request.resource.data.kind in ['license_confirmed', 'license_modified', 'license_cancelled', 'balance_adjustment']
+          && request.resource.data.delta is number;
+        allow update, delete: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

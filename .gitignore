@@ -1,0 +1,6 @@
+js/config/firebase-config.js
+.firebase/
+firebase-debug.log
+node_modules/
+.DS_Store
+
